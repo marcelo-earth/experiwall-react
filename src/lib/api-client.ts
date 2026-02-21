@@ -63,6 +63,7 @@ export async function sendEvents(
     baseUrl?: string;
     userId?: string;
     aliasId?: string;
+    keepalive?: boolean;
   }
 ): Promise<void> {
   const base = options?.baseUrl ?? DEFAULT_BASE_URL;
@@ -79,6 +80,7 @@ export async function sendEvents(
       user_id: options?.userId,
       alias_id: options?.aliasId,
     }),
+    keepalive: options?.keepalive,
   });
 
   if (!res.ok) {

@@ -14,6 +14,7 @@ export class EventBatcher {
   private aliasId?: string;
   private backoffMs = 0;
   private backoffTimer: ReturnType<typeof setTimeout> | null = null;
+  private flushing = false;
 
   constructor(opts: {
     apiKey: string;
@@ -29,7 +30,11 @@ export class EventBatcher {
 
   start() {
     if (this.timer) return;
-    this.timer = setInterval(() => this.flush(), FLUSH_INTERVAL_MS);
+    this.timer = setInterval(() => {
+      // Skip interval flush while in backoff — let the backoff timer handle it
+      if (this.backoffMs > 0) return;
+      this.flush();
+    }, FLUSH_INTERVAL_MS);
   }
 
   stop() {
@@ -41,7 +46,8 @@ export class EventBatcher {
       clearTimeout(this.backoffTimer);
       this.backoffTimer = null;
     }
-    this.flush();
+    // Use keepalive so the request survives page teardown / unmount
+    this.flush(true);
   }
 
   push(event: ExperiwallEvent) {
@@ -55,15 +61,17 @@ export class EventBatcher {
     });
   }
 
-  async flush() {
-    if (this.queue.length === 0) return;
+  async flush(keepalive = false) {
+    if (this.flushing || this.queue.length === 0) return;
 
+    this.flushing = true;
     const batch = this.queue.splice(0);
     try {
       await sendEvents(this.apiKey, batch, {
         baseUrl: this.baseUrl,
         userId: this.userId,
         aliasId: this.aliasId,
+        keepalive,
       });
       // Reset backoff on success
       this.backoffMs = 0;
@@ -87,6 +95,8 @@ export class EventBatcher {
           this.flush();
         }, this.backoffMs);
       }
+    } finally {
+      this.flushing = false;
     }
   }
 }

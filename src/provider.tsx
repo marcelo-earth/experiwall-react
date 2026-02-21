@@ -103,13 +103,14 @@ export function ExperiwallProvider({
     batcher.start();
     batcherRef.current = batcher;
 
-    const handleBeforeUnload = () => batcher.stop();
+    // Flush with keepalive on page unload (don't stop — user may cancel navigation)
+    const handleBeforeUnload = () => batcher.flush(true);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       cancelled = true;
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      batcher.stop();
+      batcher.stop(); // stop() internally flushes with keepalive
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.apiKey, config.userId, config.aliasId]);
