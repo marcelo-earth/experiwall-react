@@ -8,15 +8,32 @@
 /**
  * Deterministically bucket a user into a variant.
  * Uses the same cumulative-weight algorithm as the server.
+ *
+ * If `weights` are provided (from server init response), uses them directly.
+ * Otherwise falls back to equal-weight distribution for backward compat.
  */
 export function bucketLocally(
   variants: string[],
-  userSeed: number
+  userSeed: number,
+  weights?: number[]
 ): string | null {
   if (variants.length === 0) return null;
 
-  // Equal-weight distribution with remainder on last variant
   const count = variants.length;
+
+  if (weights && weights.length === count) {
+    // Use server-provided weights
+    let cumulative = 0;
+    for (let i = 0; i < count; i++) {
+      cumulative += weights[i];
+      if (userSeed < cumulative) {
+        return variants[i];
+      }
+    }
+    return null;
+  }
+
+  // Fallback: equal-weight distribution with remainder on last variant
   const baseWeight = Math.floor(100 / count);
 
   let cumulative = 0;

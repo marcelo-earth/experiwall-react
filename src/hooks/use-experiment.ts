@@ -19,6 +19,7 @@ export function useExperiment(
   const {
     userSeed,
     assignments,
+    experiments,
     isLoading,
     trackEvent,
     registerLocalFlag,
@@ -34,8 +35,10 @@ export function useExperiment(
     // Known flag — use server assignment
     variant = assignments[flagKey];
   } else if (userSeed !== null) {
-    // Unknown flag — bucket locally
-    variant = bucketLocally(variants, userSeed);
+    // Unknown flag — bucket locally using server weights if available
+    const expData = experiments?.[flagKey];
+    const weights = expData?.variants.map((v) => v.weight);
+    variant = bucketLocally(variants, userSeed, weights);
 
     // Register with server (once)
     if (variant && !registeredRef.current) {

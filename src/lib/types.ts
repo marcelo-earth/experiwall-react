@@ -3,6 +3,7 @@
 export interface InitResponse {
   user_seed: number;
   assignments: Record<string, string>;
+  experiments?: Record<string, { variants: { key: string; weight: number }[] }>;
 }
 
 // ─── Flag Registration ─────────────────────────────────────────
