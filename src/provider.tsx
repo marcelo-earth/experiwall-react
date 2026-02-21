@@ -22,6 +22,7 @@ export interface ExperiwallContextValue {
   userSeed: number | null;
   assignments: Record<string, string>;
   experiments: InitResponse["experiments"];
+  overrides: Record<string, string>;
   isLoading: boolean;
   error: Error | null;
   trackEvent: (event: ExperiwallEvent) => void;
@@ -148,6 +149,7 @@ export function ExperiwallProvider({
         userSeed,
         assignments,
         experiments,
+        overrides: config.overrides ?? {},
         isLoading,
         error,
         trackEvent,

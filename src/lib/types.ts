@@ -37,4 +37,28 @@ export interface ExperiwallConfig {
   baseUrl?: string;
   userId?: string;
   aliasId?: string;
+  /**
+   * Force specific variants for QA and testing.
+   * Overridden flags skip exposure tracking, server registration,
+   * and bucketing — no experiment data is contaminated.
+   *
+   * ```tsx
+   * <ExperiwallProvider
+   *   apiKey="..."
+   *   overrides={{ "checkout-flow": "new-checkout" }}
+   * >
+   * ```
+   */
+  overrides?: Record<string, string>;
+}
+
+// ─── Hook Options ───────────────────────────────────────────────
+
+export interface UseExperimentOptions {
+  /**
+   * Force this hook to return a specific variant.
+   * Takes precedence over provider-level overrides.
+   * Skips exposure tracking and server registration.
+   */
+  force?: string;
 }

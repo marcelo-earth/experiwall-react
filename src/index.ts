@@ -14,4 +14,5 @@ export type {
   FlagRegistrationResponse,
   ExperiwallEvent,
   ExperiwallConfig,
+  UseExperimentOptions,
 } from "./lib/types";
