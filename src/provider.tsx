@@ -104,12 +104,24 @@ export function ExperiwallProvider({
     batcher.start();
     batcherRef.current = batcher;
 
-    // Flush with keepalive on page unload (don't stop — user may cancel navigation)
+    // Flush when the page becomes hidden (tab switch, home screen, app kill).
+    // This is the primary flush trigger — it fires reliably on both mobile
+    // and desktop, unlike beforeunload which mobile browsers skip entirely.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        batcher.flush(true);
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Desktop fallback — beforeunload fires on tab close / navigation
+    // in desktop browsers where visibilitychange may not fire in time.
     const handleBeforeUnload = () => batcher.flush(true);
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
       cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
       batcher.stop(); // stop() internally flushes with keepalive
     };
