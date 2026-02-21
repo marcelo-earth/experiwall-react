@@ -68,7 +68,7 @@ export async function sendEvents(
   const base = options?.baseUrl ?? DEFAULT_BASE_URL;
   const url = new URL("/api/sdk/events", base);
 
-  await fetch(url.toString(), {
+  const res = await fetch(url.toString(), {
     method: "POST",
     headers: {
       "x-api-key": apiKey,
@@ -80,4 +80,12 @@ export async function sendEvents(
       alias_id: options?.aliasId,
     }),
   });
+
+  if (!res.ok) {
+    const err = new Error(`Experiwall API error: ${res.status}`) as Error & {
+      status: number;
+    };
+    err.status = res.status;
+    throw err;
+  }
 }

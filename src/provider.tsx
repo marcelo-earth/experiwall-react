@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { ExperiwallConfig, ExperiwallEvent } from "./lib/types";
+import type { ExperiwallConfig, ExperiwallEvent, InitResponse } from "./lib/types";
 import { fetchInit, registerFlag } from "./lib/api-client";
 import { EventBatcher } from "./lib/event-batcher";
 import { getCached, setCache } from "./lib/cache";
@@ -21,6 +21,7 @@ function getCacheKey(userId?: string, aliasId?: string): string {
 export interface ExperiwallContextValue {
   userSeed: number | null;
   assignments: Record<string, string>;
+  experiments: InitResponse["experiments"];
   isLoading: boolean;
   error: Error | null;
   trackEvent: (event: ExperiwallEvent) => void;
@@ -42,6 +43,7 @@ export function ExperiwallProvider({
 }: ExperiwallConfig & { children: ReactNode }) {
   const [userSeed, setUserSeed] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
+  const [experiments, setExperiments] = useState<InitResponse["experiments"]>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const batcherRef = useRef<EventBatcher | null>(null);
@@ -55,10 +57,11 @@ export function ExperiwallProvider({
 
       // Check cache first (keyed by user identity)
       const cacheKey = getCacheKey(config.userId, config.aliasId);
-      const cached = getCached<{ user_seed: number; assignments: Record<string, string> }>(cacheKey);
+      const cached = getCached<InitResponse>(cacheKey);
       if (cached) {
         setUserSeed(cached.user_seed);
         setAssignments(cached.assignments);
+        setExperiments(cached.experiments);
         setIsLoading(false);
         return;
       }
@@ -72,6 +75,7 @@ export function ExperiwallProvider({
         if (!cancelled) {
           setUserSeed(data.user_seed);
           setAssignments(data.assignments);
+          setExperiments(data.experiments);
           setCache(cacheKey, data);
         }
       } catch (err) {
@@ -99,8 +103,12 @@ export function ExperiwallProvider({
     batcher.start();
     batcherRef.current = batcher;
 
+    const handleBeforeUnload = () => batcher.stop();
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       cancelled = true;
+      window.removeEventListener("beforeunload", handleBeforeUnload);
       batcher.stop();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,6 +146,7 @@ export function ExperiwallProvider({
       value={{
         userSeed,
         assignments,
+        experiments,
         isLoading,
         error,
         trackEvent,
