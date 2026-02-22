@@ -50,6 +50,19 @@ export interface ExperiwallConfig {
    * ```
    */
   overrides?: Record<string, string>;
+  /**
+   * Tag events with an environment label so the dashboard can
+   * segment dev traffic from production experiment results.
+   * Defaults to `"production"` if omitted.
+   *
+   * ```tsx
+   * <ExperiwallProvider
+   *   apiKey="..."
+   *   environment={process.env.NODE_ENV === "production" ? "production" : "development"}
+   * >
+   * ```
+   */
+  environment?: string;
 }
 
 // ─── Hook Options ───────────────────────────────────────────────

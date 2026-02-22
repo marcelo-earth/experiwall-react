@@ -12,6 +12,7 @@ export class EventBatcher {
   private baseUrl?: string;
   private userId?: string;
   private aliasId?: string;
+  private environment?: string;
   private backoffMs = 0;
   private backoffTimer: ReturnType<typeof setTimeout> | null = null;
   private flushing = false;
@@ -21,11 +22,13 @@ export class EventBatcher {
     baseUrl?: string;
     userId?: string;
     aliasId?: string;
+    environment?: string;
   }) {
     this.apiKey = opts.apiKey;
     this.baseUrl = opts.baseUrl;
     this.userId = opts.userId;
     this.aliasId = opts.aliasId;
+    this.environment = opts.environment;
   }
 
   start() {
@@ -72,6 +75,7 @@ export class EventBatcher {
         userId: this.userId,
         aliasId: this.aliasId,
         keepalive,
+        environment: this.environment,
       });
       // Reset backoff on success
       this.backoffMs = 0;

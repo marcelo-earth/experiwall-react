@@ -13,9 +13,10 @@ import { fetchInit, registerFlag } from "./lib/api-client";
 import { EventBatcher } from "./lib/event-batcher";
 import { getCached, setCache } from "./lib/cache";
 
-function getCacheKey(userId?: string, aliasId?: string): string {
+function getCacheKey(userId?: string, aliasId?: string, environment?: string): string {
   const identity = userId || aliasId || "anon";
-  return `experiwall_init_${identity}`;
+  const env = environment || "production";
+  return `experiwall_init_${identity}_${env}`;
 }
 
 export interface ExperiwallContextValue {
@@ -57,7 +58,7 @@ export function ExperiwallProvider({
       setError(null);
 
       // Check cache first (keyed by user identity)
-      const cacheKey = getCacheKey(config.userId, config.aliasId);
+      const cacheKey = getCacheKey(config.userId, config.aliasId, config.environment);
       const cached = getCached<InitResponse>(cacheKey);
       if (cached) {
         setUserSeed(cached.user_seed);
@@ -68,10 +69,12 @@ export function ExperiwallProvider({
       }
 
       try {
+        const environment = config.environment ?? "production";
         const data = await fetchInit(config.apiKey, {
           baseUrl: config.baseUrl,
           userId: config.userId,
           aliasId: config.aliasId,
+          environment,
         });
         if (!cancelled) {
           setUserSeed(data.user_seed);
@@ -100,6 +103,7 @@ export function ExperiwallProvider({
       baseUrl: config.baseUrl,
       userId: config.userId,
       aliasId: config.aliasId,
+      environment: config.environment ?? "production",
     });
     batcher.start();
     batcherRef.current = batcher;
@@ -126,7 +130,7 @@ export function ExperiwallProvider({
       batcher.stop(); // stop() internally flushes with keepalive
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.apiKey, config.userId, config.aliasId]);
+  }, [config.apiKey, config.userId, config.aliasId, config.environment]);
 
   const trackEvent = useCallback((event: ExperiwallEvent) => {
     batcherRef.current?.push(event);
@@ -147,12 +151,12 @@ export function ExperiwallProvider({
           user_id: config.userId,
           alias_id: config.aliasId,
         },
-        { baseUrl: config.baseUrl }
+        { baseUrl: config.baseUrl, environment: config.environment ?? "production" }
       ).catch(() => {
         // Silent failure — local assignment is authoritative
       });
     },
-    [config.apiKey, config.baseUrl, config.userId, config.aliasId]
+    [config.apiKey, config.baseUrl, config.userId, config.aliasId, config.environment]
   );
 
   return (
