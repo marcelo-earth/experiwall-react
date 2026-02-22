@@ -5,7 +5,7 @@ import type {
   ExperiwallEvent,
 } from "./types";
 
-const DEFAULT_BASE_URL = "https://experiwall.com";
+const DEFAULT_BASE_URL = "https://www.experiwall.com";
 
 export async function fetchInit(
   apiKey: string,
