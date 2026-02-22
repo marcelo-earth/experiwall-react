@@ -1,6 +1,6 @@
 {
   "name": "@experiwall/react",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Experiwall React SDK — code-first experimentation and A/B testing",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
