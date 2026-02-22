@@ -38,6 +38,8 @@ export interface ExperimentsResponse {
  *
  * Call this from server components to resolve variants at SSR time.
  * Pass a `userId` or `aliasId` to identify the visitor (e.g. from a cookie).
+ * If neither is provided, a random ID is generated automatically so the
+ * call always succeeds (useful on first visit before a cookie is set).
  */
 export async function fetchExperiments(
   config: ServerConfig
@@ -45,8 +47,10 @@ export async function fetchExperiments(
   const base = config.baseUrl ?? DEFAULT_BASE_URL;
   const url = new URL("/api/sdk/init", base);
 
+  const aliasId = config.aliasId ?? (!config.userId ? crypto.randomUUID() : undefined);
+
   if (config.userId) url.searchParams.set("user_id", config.userId);
-  if (config.aliasId) url.searchParams.set("alias_id", config.aliasId);
+  if (aliasId) url.searchParams.set("alias_id", aliasId);
   if (config.environment) url.searchParams.set("environment", config.environment);
 
   const res = await fetch(url.toString(), {
