@@ -13,6 +13,21 @@ import { fetchInit, registerFlag } from "./lib/api-client";
 import { EventBatcher } from "./lib/event-batcher";
 import { getCached, setCache } from "./lib/cache";
 
+const ANON_ID_KEY = "experiwall_anon_id";
+
+function getOrCreateAnonId(): string {
+  try {
+    const existing = localStorage.getItem(ANON_ID_KEY);
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    localStorage.setItem(ANON_ID_KEY, id);
+    return id;
+  } catch {
+    // SSR or localStorage unavailable — ephemeral ID for this session
+    return crypto.randomUUID();
+  }
+}
+
 function getCacheKey(userId?: string, aliasId?: string, environment?: string): string {
   const identity = userId || aliasId || "anon";
   const env = environment || "production";
@@ -43,6 +58,13 @@ export function ExperiwallProvider({
   children,
   ...config
 }: ExperiwallConfig & { children: ReactNode }) {
+  // Auto-generate a persistent anonymous ID when no userId/aliasId is provided,
+  // following the same pattern as Mixpanel, Amplitude, and PostHog.
+  const [anonId] = useState(() =>
+    !config.userId && !config.aliasId ? getOrCreateAnonId() : undefined
+  );
+  const effectiveAliasId = config.aliasId ?? anonId;
+
   const [userSeed, setUserSeed] = useState<number | null>(null);
   const [assignments, setAssignments] = useState<Record<string, string>>({});
   const [experiments, setExperiments] = useState<InitResponse["experiments"]>();
@@ -58,7 +80,7 @@ export function ExperiwallProvider({
       setError(null);
 
       // Check cache first (keyed by user identity)
-      const cacheKey = getCacheKey(config.userId, config.aliasId, config.environment);
+      const cacheKey = getCacheKey(config.userId, effectiveAliasId, config.environment);
       const cached = getCached<InitResponse>(cacheKey);
       if (cached) {
         setUserSeed(cached.user_seed);
@@ -73,7 +95,7 @@ export function ExperiwallProvider({
         const data = await fetchInit(config.apiKey, {
           baseUrl: config.baseUrl,
           userId: config.userId,
-          aliasId: config.aliasId,
+          aliasId: effectiveAliasId,
           environment,
         });
         if (!cancelled) {
@@ -102,7 +124,7 @@ export function ExperiwallProvider({
       apiKey: config.apiKey,
       baseUrl: config.baseUrl,
       userId: config.userId,
-      aliasId: config.aliasId,
+      aliasId: effectiveAliasId,
       environment: config.environment ?? "production",
     });
     batcher.start();
@@ -130,7 +152,7 @@ export function ExperiwallProvider({
       batcher.stop(); // stop() internally flushes with keepalive
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [config.apiKey, config.userId, config.aliasId, config.environment]);
+  }, [config.apiKey, config.userId, effectiveAliasId, config.environment]);
 
   const trackEvent = useCallback((event: ExperiwallEvent) => {
     batcherRef.current?.push(event);
@@ -149,14 +171,14 @@ export function ExperiwallProvider({
           variants,
           assigned_variant: assignedVariant,
           user_id: config.userId,
-          alias_id: config.aliasId,
+          alias_id: effectiveAliasId,
         },
         { baseUrl: config.baseUrl, environment: config.environment ?? "production" }
       ).catch(() => {
         // Silent failure — local assignment is authoritative
       });
     },
-    [config.apiKey, config.baseUrl, config.userId, config.aliasId, config.environment]
+    [config.apiKey, config.baseUrl, config.userId, effectiveAliasId, config.environment]
   );
 
   return (
