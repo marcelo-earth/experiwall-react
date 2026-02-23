@@ -14,9 +14,28 @@ import { EventBatcher } from "./lib/event-batcher";
 import { getCached, setCache } from "./lib/cache";
 
 const ANON_ID_KEY = "experiwall_anon_id";
+const COOKIE_NAME = "ew_anon_id";
+
+function getCookie(name: string): string | undefined {
+  try {
+    const match = document.cookie.match(
+      new RegExp("(?:^|; )" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "=([^;]*)")
+    );
+    return match ? decodeURIComponent(match[1]) : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function getOrCreateAnonId(): string {
   try {
+    // Prefer the server-set cookie so client and server share one identity
+    const fromCookie = getCookie(COOKIE_NAME);
+    if (fromCookie) {
+      localStorage.setItem(ANON_ID_KEY, fromCookie);
+      return fromCookie;
+    }
+
     const existing = localStorage.getItem(ANON_ID_KEY);
     if (existing) return existing;
     const id = crypto.randomUUID();
